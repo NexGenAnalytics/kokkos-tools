@@ -54,12 +54,17 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include "kp_core.hpp"
+
+namespace KokkosTools {
+namespace HighwaterMark {
+
 static uint64_t uniqID = 0;
 
-extern "C" void kokkosp_init_library(const int loadSeq,
+void kokkosp_init_library(const int loadSeq,
 	const uint64_t interfaceVer,
 	const uint32_t devInfoCount,
-	void* deviceInfo) {
+	Kokkos_Profiling_KokkosPDeviceInfo* deviceInfo) {
 
 	printf("KokkosP: Example Library Initialized (sequence is %d, version: %llu)\n", loadSeq, interfaceVer);
 }
@@ -71,7 +76,7 @@ extern "C" void kokkosp_init_library(const int loadSeq,
 #    define RU_MAXRSS_UNITS 1
 #endif
 
-extern "C" void kokkosp_finalize_library() {
+void kokkosp_finalize_library() {
 	printf("\n");
 	printf("KokkosP: Finalization of profiling library.\n");
 
@@ -82,3 +87,26 @@ extern "C" void kokkosp_finalize_library() {
 		(long) sys_resources.ru_maxrss * RU_MAXRSS_UNITS);
 	printf("\n");
 }
+
+Kokkos::Tools::Experimental::EventSet get_event_set() {
+    Kokkos::Tools::Experimental::EventSet my_event_set;
+    memset(&my_event_set, 0, sizeof(my_event_set)); // zero any pointers not set here
+    my_event_set.init = kokkosp_init_library;
+    my_event_set.finalize = kokkosp_finalize_library;
+    return my_event_set;
+}
+
+// static auto event_set = get_event_set();
+
+}} // namespace KokkosTools::HighwaterMark
+
+extern "C" {
+
+namespace impl = KokkosTools::HighwaterMark;
+
+EXPOSE_INIT(impl::kokkosp_init_library) 
+EXPOSE_FINALIZE(impl::kokkosp_finalize_library)
+
+// EXPOSE_KOKKOS_INTERFACE(KokkosTools::HighwaterMark::event_set)
+
+} // extern "C"

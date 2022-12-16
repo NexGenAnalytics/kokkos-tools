@@ -44,10 +44,12 @@
 #define _H_KOKKOSP_KERNEL_VTUNE_CONNECTOR_INFO
 
 #include <stdio.h>
-#include <sys/time.h>
 #include <cstring>
 
 #include "ittnotify.h"
+
+namespace KokkosTools {
+namespace VTuneFocusedConnector {
 
 enum KernelExecutionType {
 	PARALLEL_FOR = 0,
@@ -93,5 +95,6 @@ class KernelVTuneFocusedConnectorInfo {
 		__itt_domain* domain;
 		__itt_string_handle* domainNameHandle;
 };
+}} // namespace KokkosTools::VTuneFocusedConnector
 
 #endif

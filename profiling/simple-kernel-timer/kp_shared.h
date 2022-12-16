@@ -1,14 +1,13 @@
-/*
 //@HEADER
 // ************************************************************************
-// 
+//
 //                        Kokkos v. 3.0
 //       Copyright (2020) National Technology & Engineering
 //               Solutions of Sandia, LLC (NTESS).
-// 
+//
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -36,52 +35,64 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact  David Poliakoff (dzpolia@sandia.gov)
-// 
+// Questions? Contact David Poliakoff (dzpolia@sandia.gov)
+//
 // ************************************************************************
 //@HEADER
-// */
 
-#define MEMOP_ALLOCATE 1
-#define MEMOP_DEALLOCATE 2
-#include <cstring>
+#ifndef _H_KOKKOSP_KERNEL_SHARED
+#define _H_KOKKOSP_KERNEL_SHARED
 
-struct SpaceHandle {
-  char name[64];
+#include <map>
+#include <memory>
+#include "kp_kernel_info.h"
+
+namespace KokkosTools::KernelTimer {
+
+extern uint64_t uniqID;
+extern KernelPerformanceInfo* currentEntry;
+extern std::map<std::string, KernelPerformanceInfo*> count_map;
+extern double initTime;
+extern char* outputDelimiter;
+extern int current_region_level;
+extern KernelPerformanceInfo* regions[512];
+
+inline void increment_counter(const char* name, KernelExecutionType kType) {
+	std::string nameStr(name);
+
+	if(count_map.find(name) == count_map.end()) {
+		KernelPerformanceInfo *info = new KernelPerformanceInfo(nameStr, kType);
+		count_map.insert(std::pair<std::string, KernelPerformanceInfo*>(nameStr, info));
+
+		currentEntry = info;
+	} else {
+		currentEntry = count_map[nameStr];
+	}
+
+	currentEntry->startTimer();
+}
+
+inline void increment_counter_region(const char* name, KernelExecutionType kType) {
+        std::string nameStr(name);
+
+        if(count_map.find(name) == count_map.end()) {
+		KernelPerformanceInfo* info = new KernelPerformanceInfo(nameStr, kType);
+		count_map.insert(std::pair<std::string, KernelPerformanceInfo*>(nameStr, info));
+
+                regions[current_region_level] = info;
+        } else {
+                regions[current_region_level] = count_map[nameStr];
+        }
+
+        regions[current_region_level]->startTimer();
+        current_region_level++;
+}
+
+inline bool compareKernelPerformanceInfo(KernelPerformanceInfo* left, KernelPerformanceInfo* right)
+{
+	return left->getTime() > right->getTime();
 };
 
-char space_name[16][64];
+} // namespace KokkosTools::KernelTimer
 
-struct EventRecord {
-  const void* ptr;
-  uint64_t size;
-  int operation;
-  int space;
-  double time;
-  char name[256];
-
-
-  EventRecord(const void* const ptr_, const uint64_t size_, const int operation_,
-              const int space_, const double time_, const char* const name_) {
-    ptr = ptr_;
-    size = size_;
-    operation = operation_;
-    space = space_;
-    time = time_;
-    strncpy(name,name_,256);
-  }
-
-  void print_record() const {
-    if(operation == MEMOP_ALLOCATE)
-      printf("%lf %16p %14d %16s Allocate   %s\n",time,ptr,size,space<0?"":space_name[space],name);
-    if(operation == MEMOP_DEALLOCATE)
-      printf("%lf %16p %14d %16s DeAllocate %s\n",time,ptr,-size,space<0?"":space_name[space],name);
-  }
-  void print_record(FILE* ofile) const {
-    if(operation == MEMOP_ALLOCATE)
-      fprintf(ofile,"%lf %16p %14d %16s Allocate   %s\n",time,ptr,size,space<0?"":space_name[space],name);
-    if(operation == MEMOP_DEALLOCATE)
-      fprintf(ofile,"%lf %16p %14d %16s DeAllocate %s\n",time,ptr,-size,space<0?"":space_name[space],name);
-  }
-};
-
+#endif // _H_KOKKOSP_KERNEL_SHARED

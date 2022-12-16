@@ -40,81 +40,16 @@
 // ************************************************************************
 //@HEADER
 
-#ifndef _H_KOKKOSP_KERNEL_NVPROF_CONNECTOR_INFO
-#define _H_KOKKOSP_KERNEL_NVPROF_CONNECTOR_INFO
+#ifndef KOKKOSTOOLS_ALL_HPP
+#define KOKKOSTOOLS_ALL_HPP
 
-#include <stdio.h>
-#include <sys/time.h>
-#include <cstring>
-
-#include "nvToolsExt.h"
+#include "kp_config.hpp"
+#include "impl/Kokkos_Profiling_Interface.hpp" // Note: impl/... is used inside the header
 
 namespace KokkosTools {
-namespace NVProfFocusedConnector {
 
-enum KernelExecutionType {
-	PARALLEL_FOR = 0,
-	PARALLEL_REDUCE = 1,
-	PARALLEL_SCAN = 2
-};
+Kokkos::Tools::Experimental::EventSet get_event_set(const char *profiler, const char *options);
 
-class KernelNVProfFocusedConnectorInfo {
-	public:
-		KernelNVProfFocusedConnectorInfo(std::string kName, KernelExecutionType kernelType) {
-
-		  domainNameHandle = kName;
-			char* domainName = (char*) malloc( sizeof(char*) * (32 + kName.size()) );
-
-			if(kernelType == PARALLEL_FOR) {
-				sprintf(domainName, "ParallelFor.%s", kName.c_str());
-			} else if(kernelType == PARALLEL_REDUCE) {
-				sprintf(domainName, "ParallelReduce.%s", kName.c_str());
-			} else if(kernelType == PARALLEL_SCAN) {
-				sprintf(domainName, "ParallelScan.%s", kName.c_str());
-			} else {
-				sprintf(domainName, "Kernel.%s", kName.c_str());
-			}
-
-			domain = nvtxDomainCreateA(domainName);
-			currentRange = 0;
-		}
-
-		nvtxRangeId_t startRange() {
-		  nvtxEventAttributes_t eventAttrib = {0};
-		  eventAttrib.version = NVTX_VERSION;
-		  eventAttrib.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
-		  eventAttrib.messageType = NVTX_MESSAGE_TYPE_ASCII;
-		  eventAttrib.message.ascii = "my range";
-		  currentRange = nvtxDomainRangeStartEx(domain,&eventAttrib);
-		  return currentRange;
-		}
-
-		nvtxRangeId_t getCurrentRange() {
-		  return currentRange;
-		}
-
-		void endRange() {
-		  nvtxDomainRangeEnd(domain,currentRange);
-		}
-
-		nvtxDomainHandle_t getDomain() {
-			return domain;
-		}
-
-		std::string getDomainNameHandle() {
-			return domainNameHandle;
-		}
-
-		~KernelNVProfFocusedConnectorInfo() {
-		  nvtxDomainDestroy(domain);
-		}
-
-	private:
-		std::string domainNameHandle;
-		nvtxRangeId_t currentRange;
-		nvtxDomainHandle_t domain;
-};
+}
 
 #endif
-
-}} // KokkosTools::NVProfFocusedConnector
